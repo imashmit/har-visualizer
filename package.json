@@ -1,0 +1,24 @@
+{
+  "name": "har-viewer",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Upload a HAR file and explore its network requests \u2014 status, timing, waterfall, headers and payloads \u2014 in a clean, visual way. Runs entirely in the browser.",
+  "keywords": ["har", "network", "devtools", "waterfall", "viewer", "react", "vite"],
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.3"
+  }
+}
