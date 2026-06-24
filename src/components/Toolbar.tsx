@@ -1,11 +1,22 @@
 import type { StatusClass } from '../types/har'
+import { statusColorVar } from '../utils/format'
+import { MultiSelect } from './MultiSelect'
+import { ColumnPicker } from './ColumnPicker'
+import type { ColumnKey } from './columns'
 import './Toolbar.css'
 
 export interface Filters {
   search: string
-  method: string
-  statusClass: StatusClass | 'all'
-  type: string
+  methods: string[]
+  statusClasses: StatusClass[]
+  types: string[]
+}
+
+export const EMPTY_FILTERS: Filters = {
+  search: '',
+  methods: [],
+  statusClasses: [],
+  types: [],
 }
 
 interface Props {
@@ -15,10 +26,12 @@ interface Props {
   types: string[]
   visibleCount: number
   totalCount: number
+  columns: ColumnKey[]
+  onColumnsChange: (cols: ColumnKey[]) => void
+  onColumnsReset: () => void
 }
 
-const STATUS_OPTIONS: Array<{ value: StatusClass | 'all'; label: string }> = [
-  { value: 'all', label: 'All status' },
+const STATUS_OPTIONS: Array<{ value: StatusClass; label: string }> = [
   { value: '2xx', label: '2xx Success' },
   { value: '3xx', label: '3xx Redirect' },
   { value: '4xx', label: '4xx Client error' },
@@ -26,13 +39,23 @@ const STATUS_OPTIONS: Array<{ value: StatusClass | 'all'; label: string }> = [
   { value: 'pending', label: 'No status' },
 ]
 
-export function Toolbar({ filters, onChange, methods, types, visibleCount, totalCount }: Props) {
+export function Toolbar({
+  filters,
+  onChange,
+  methods,
+  types,
+  visibleCount,
+  totalCount,
+  columns,
+  onColumnsChange,
+  onColumnsReset,
+}: Props) {
   const set = (patch: Partial<Filters>) => onChange({ ...filters, ...patch })
   const isFiltered =
     filters.search !== '' ||
-    filters.method !== 'all' ||
-    filters.statusClass !== 'all' ||
-    filters.type !== 'all'
+    filters.methods.length > 0 ||
+    filters.statusClasses.length > 0 ||
+    filters.types.length > 0
 
   return (
     <div className="toolbar">
@@ -40,7 +63,7 @@ export function Toolbar({ filters, onChange, methods, types, visibleCount, total
         <SearchIcon />
         <input
           type="text"
-          placeholder="Filter by URL or name…"
+          placeholder="Search everything — URL, headers, body, cookies…"
           value={filters.search}
           onChange={(e) => set({ search: e.target.value })}
         />
@@ -51,34 +74,30 @@ export function Toolbar({ filters, onChange, methods, types, visibleCount, total
         )}
       </div>
 
-      <select value={filters.method} onChange={(e) => set({ method: e.target.value })}>
-        <option value="all">All methods</option>
-        {methods.map((m) => (
-          <option key={m} value={m}>
-            {m}
-          </option>
-        ))}
-      </select>
+      <MultiSelect
+        label="Methods"
+        options={methods.map((m) => ({ value: m, label: m }))}
+        selected={filters.methods}
+        onChange={(v) => set({ methods: v })}
+      />
 
-      <select
-        value={filters.statusClass}
-        onChange={(e) => set({ statusClass: e.target.value as StatusClass | 'all' })}
-      >
-        {STATUS_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      <MultiSelect
+        label="Status"
+        options={STATUS_OPTIONS.map((o) => ({
+          value: o.value,
+          label: o.label,
+          color: statusColorVar(o.value),
+        }))}
+        selected={filters.statusClasses}
+        onChange={(v) => set({ statusClasses: v as StatusClass[] })}
+      />
 
-      <select value={filters.type} onChange={(e) => set({ type: e.target.value })}>
-        <option value="all">All types</option>
-        {types.map((t) => (
-          <option key={t} value={t}>
-            {t}
-          </option>
-        ))}
-      </select>
+      <MultiSelect
+        label="Types"
+        options={types.map((t) => ({ value: t, label: t }))}
+        selected={filters.types}
+        onChange={(v) => set({ types: v })}
+      />
 
       <div className="toolbar-spacer" />
 
@@ -93,13 +112,12 @@ export function Toolbar({ filters, onChange, methods, types, visibleCount, total
       </span>
 
       {isFiltered && (
-        <button
-          className="reset-btn"
-          onClick={() => onChange({ search: '', method: 'all', statusClass: 'all', type: 'all' })}
-        >
+        <button className="reset-btn" onClick={() => onChange({ ...EMPTY_FILTERS })}>
           Reset
         </button>
       )}
+
+      <ColumnPicker visible={columns} onChange={onColumnsChange} onReset={onColumnsReset} />
     </div>
   )
 }

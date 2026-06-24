@@ -118,6 +118,8 @@ export interface NormalizedEntry {
   statusClass: StatusClass
   type: ResourceType
   mimeType: string
+  /** HTTP protocol version, e.g. "http/2.0". */
+  protocol: string
   /** Transfer size in bytes (over the wire when available). */
   size: number
   /** Uncompressed resource/content size in bytes. */
@@ -127,6 +129,8 @@ export interface NormalizedEntry {
   /** ms offset from the first request's start. */
   startOffset: number
   startedDateTime: number
+  /** Lowercased concatenation of all searchable fields for deep search. */
+  searchText: string
   raw: HarEntry
 }
 

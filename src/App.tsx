@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
 import { FileUpload } from './components/FileUpload'
 import { SummaryBar } from './components/SummaryBar'
-import { Toolbar, type Filters } from './components/Toolbar'
+import { Toolbar, EMPTY_FILTERS, type Filters } from './components/Toolbar'
+import { Timeline } from './components/Timeline'
 import { RequestList } from './components/RequestList'
 import { DetailPanel } from './components/DetailPanel'
 import { WaterfallLegend } from './components/WaterfallChart'
+import { DEFAULT_COLUMNS, type ColumnKey } from './components/columns'
 import { HarParseError, normalizeEntries, parseHar, summarize } from './utils/harParser'
 import { typeLabel } from './utils/format'
 import type { NormalizedEntry } from './types/har'
@@ -17,18 +19,12 @@ interface LoadedHar {
   creator: string
 }
 
-const EMPTY_FILTERS: Filters = {
-  search: '',
-  method: 'all',
-  statusClass: 'all',
-  type: 'all',
-}
-
 export default function App() {
   const [loaded, setLoaded] = useState<LoadedHar | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [columns, setColumns] = useState<ColumnKey[]>(DEFAULT_COLUMNS)
 
   const loadFromText = (text: string, fileName: string) => {
     try {
@@ -73,19 +69,20 @@ export default function App() {
   const types = useMemo(
     () =>
       loaded
-        ? [...new Set(loaded.entries.map((e) => e.type))].map((t) => typeLabel(t)).sort()
+        ? [...new Set(loaded.entries.map((e) => typeLabel(e.type)))].sort()
         : [],
     [loaded],
   )
 
   const filtered = useMemo(() => {
     if (!loaded) return []
-    const q = filters.search.trim().toLowerCase()
+    const terms = filters.search.trim().toLowerCase().split(/\s+/).filter(Boolean)
     return loaded.entries.filter((e) => {
-      if (q && !e.url.toLowerCase().includes(q) && !e.name.toLowerCase().includes(q)) return false
-      if (filters.method !== 'all' && e.method !== filters.method) return false
-      if (filters.statusClass !== 'all' && e.statusClass !== filters.statusClass) return false
-      if (filters.type !== 'all' && typeLabel(e.type) !== filters.type) return false
+      // Deep search: every term must appear somewhere in the entry.
+      if (terms.length && !terms.every((t) => e.searchText.includes(t))) return false
+      if (filters.methods.length && !filters.methods.includes(e.method)) return false
+      if (filters.statusClasses.length && !filters.statusClasses.includes(e.statusClass)) return false
+      if (filters.types.length && !filters.types.includes(typeLabel(e.type))) return false
       return true
     })
   }, [loaded, filters])
@@ -116,7 +113,7 @@ export default function App() {
             <span className="bar b2" />
             <span className="bar b3" />
           </span>
-          <span className="brand-name">HAR Viewer</span>
+          <span className="brand-name">HAR Visualizer</span>
         </button>
         <span className="file-chip" title={loaded.fileName}>
           {loaded.fileName}
@@ -129,6 +126,13 @@ export default function App() {
 
       <SummaryBar summary={summary} />
 
+      <Timeline
+        entries={filtered}
+        totalSpan={totalSpan}
+        selectedId={selectedId}
+        onSelect={(id) => setSelectedId((cur) => (cur === id ? null : id))}
+      />
+
       <Toolbar
         filters={filters}
         onChange={setFilters}
@@ -136,6 +140,9 @@ export default function App() {
         types={types}
         visibleCount={filtered.length}
         totalCount={loaded.entries.length}
+        columns={columns}
+        onColumnsChange={setColumns}
+        onColumnsReset={() => setColumns(DEFAULT_COLUMNS)}
       />
 
       <div className={`app-main${selectedEntry ? ' with-detail' : ''}`}>
@@ -145,6 +152,7 @@ export default function App() {
             selectedId={selectedId}
             onSelect={(id) => setSelectedId((cur) => (cur === id ? null : id))}
             totalSpan={totalSpan}
+            columns={columns}
           />
           <WaterfallLegend />
         </div>

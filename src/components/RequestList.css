@@ -89,6 +89,29 @@
   font-variant-numeric: tabular-nums;
   color: var(--text-muted);
 }
+.col-domain {
+  width: 160px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+.domain-cell {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.col-protocol {
+  width: 90px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+}
+.col-start {
+  width: 96px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
 .col-wf {
   width: 28%;
   min-width: 160px;

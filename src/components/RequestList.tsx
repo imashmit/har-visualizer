@@ -1,16 +1,8 @@
 import { useMemo, useState } from 'react'
 import type { NormalizedEntry } from '../types/har'
-import {
-  formatBytes,
-  formatDuration,
-  methodColorVar,
-  statusColorVar,
-  typeLabel,
-} from '../utils/format'
-import { WaterfallBar } from './WaterfallChart'
+import { COLUMN_MAP, type ColumnDef, type ColumnKey } from './columns'
 import './RequestList.css'
 
-type SortKey = 'name' | 'status' | 'method' | 'type' | 'size' | 'time' | 'start'
 type SortDir = 'asc' | 'desc'
 
 interface Props {
@@ -18,60 +10,48 @@ interface Props {
   selectedId: number | null
   onSelect: (id: number) => void
   totalSpan: number
+  columns: ColumnKey[]
 }
 
-const COLUMNS: Array<{ key: SortKey; label: string; className: string; sortable: boolean }> = [
-  { key: 'name', label: 'Name', className: 'col-name', sortable: true },
-  { key: 'method', label: 'Method', className: 'col-method', sortable: true },
-  { key: 'status', label: 'Status', className: 'col-status', sortable: true },
-  { key: 'type', label: 'Type', className: 'col-type', sortable: true },
-  { key: 'size', label: 'Size', className: 'col-size', sortable: true },
-  { key: 'time', label: 'Time', className: 'col-time', sortable: true },
-  { key: 'start', label: 'Waterfall', className: 'col-wf', sortable: true },
-]
-
-export function RequestList({ entries, selectedId, onSelect, totalSpan }: Props) {
-  const [sortKey, setSortKey] = useState<SortKey>('start')
+export function RequestList({ entries, selectedId, onSelect, totalSpan, columns }: Props) {
+  const [sortKey, setSortKey] = useState<ColumnKey>('start')
   const [sortDir, setSortDir] = useState<SortDir>('asc')
 
-  const sorted = useMemo(() => {
-    const arr = [...entries]
-    arr.sort((a, b) => {
-      let cmp = 0
-      switch (sortKey) {
-        case 'name':
-          cmp = a.name.localeCompare(b.name)
-          break
-        case 'method':
-          cmp = a.method.localeCompare(b.method)
-          break
-        case 'status':
-          cmp = a.status - b.status
-          break
-        case 'type':
-          cmp = a.type.localeCompare(b.type)
-          break
-        case 'size':
-          cmp = a.size - b.size
-          break
-        case 'time':
-          cmp = a.time - b.time
-          break
-        case 'start':
-          cmp = a.startOffset - b.startOffset
-          break
-      }
-      return sortDir === 'asc' ? cmp : -cmp
-    })
-    return arr
-  }, [entries, sortKey, sortDir])
+  const cols: ColumnDef[] = useMemo(
+    () => columns.map((k) => COLUMN_MAP[k]).filter(Boolean),
+    [columns],
+  )
 
-  const toggleSort = (key: SortKey) => {
-    if (key === sortKey) {
+  // Fall back to a visible column if the active sort column was hidden.
+  const activeSortKey: ColumnKey = columns.includes(sortKey)
+    ? sortKey
+    : (columns.find((k) => COLUMN_MAP[k]?.sortable) ?? columns[0])
+
+  const sorted = useMemo(() => {
+    const def = COLUMN_MAP[activeSortKey]
+    const getVal = def?.sortValue
+    const arr = [...entries]
+    if (getVal) {
+      arr.sort((a, b) => {
+        const av = getVal(a)
+        const bv = getVal(b)
+        let cmp = 0
+        if (typeof av === 'number' && typeof bv === 'number') cmp = av - bv
+        else cmp = String(av).localeCompare(String(bv))
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    }
+    return arr
+  }, [entries, activeSortKey, sortDir])
+
+  const toggleSort = (key: ColumnKey) => {
+    const def = COLUMN_MAP[key]
+    if (!def?.sortable) return
+    if (key === activeSortKey) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     } else {
       setSortKey(key)
-      setSortDir(key === 'name' || key === 'method' || key === 'type' ? 'asc' : 'desc')
+      setSortDir(typeof def.sortValue?.(entries[0] ?? ({} as NormalizedEntry)) === 'number' ? 'desc' : 'asc')
     }
   }
 
@@ -90,17 +70,17 @@ export function RequestList({ entries, selectedId, onSelect, totalSpan }: Props)
       <table>
         <thead>
           <tr>
-            {COLUMNS.map((c) => (
+            {cols.map((c) => (
               <th
                 key={c.key}
                 className={`${c.className}${c.sortable ? ' sortable' : ''}${
-                  sortKey === c.key ? ' active' : ''
+                  activeSortKey === c.key ? ' active' : ''
                 }`}
-                onClick={() => c.sortable && toggleSort(c.key)}
+                onClick={() => toggleSort(c.key)}
               >
                 <span className="th-inner">
                   {c.label}
-                  {sortKey === c.key && (
+                  {activeSortKey === c.key && (
                     <span className="sort-arrow">{sortDir === 'asc' ? '\u2191' : '\u2193'}</span>
                   )}
                 </span>
@@ -115,38 +95,11 @@ export function RequestList({ entries, selectedId, onSelect, totalSpan }: Props)
               className={selectedId === e.id ? 'selected' : ''}
               onClick={() => onSelect(e.id)}
             >
-              <td className="col-name">
-                <div className="name-cell">
-                  <span className="name-main" title={e.url}>
-                    {e.name}
-                  </span>
-                  <span className="name-domain">{e.domain}</span>
-                </div>
-              </td>
-              <td className="col-method">
-                <span className="method-badge" style={{ color: methodColorVar(e.method) }}>
-                  {e.method}
-                </span>
-              </td>
-              <td className="col-status">
-                <span className="status-cell">
-                  <span className="status-dot" style={{ background: statusColorVar(e.statusClass) }} />
-                  <span className="status-code" style={{ color: statusColorVar(e.statusClass) }}>
-                    {e.status > 0 ? e.status : '\u2014'}
-                  </span>
-                </span>
-              </td>
-              <td className="col-type">{typeLabel(e.type)}</td>
-              <td className="col-size">{formatBytes(e.size)}</td>
-              <td className="col-time">{formatDuration(e.time)}</td>
-              <td className="col-wf">
-                <WaterfallBar
-                  startOffset={e.startOffset}
-                  time={e.time}
-                  timings={e.raw.timings}
-                  totalSpan={totalSpan}
-                />
-              </td>
+              {cols.map((c) => (
+                <td key={c.key} className={c.className}>
+                  {c.render(e, { totalSpan })}
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>

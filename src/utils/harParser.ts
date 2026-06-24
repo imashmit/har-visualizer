@@ -105,6 +105,32 @@ function transferSize(entry: HarEntry): number {
   return entry.response?.content?.size ?? 0
 }
 
+function buildSearchText(entry: HarEntry): string {
+  const parts: string[] = []
+  const req = entry.request
+  const res = entry.response
+
+  parts.push(req?.method ?? '', req?.url ?? '', req?.httpVersion ?? '')
+  parts.push(String(res?.status ?? ''), res?.statusText ?? '', res?.httpVersion ?? '')
+  parts.push(res?.content?.mimeType ?? '')
+  if (entry.serverIPAddress) parts.push(entry.serverIPAddress)
+
+  for (const h of req?.headers ?? []) parts.push(h.name, h.value)
+  for (const h of res?.headers ?? []) parts.push(h.name, h.value)
+  for (const q of req?.queryString ?? []) parts.push(q.name, q.value)
+  for (const c of req?.cookies ?? []) parts.push(c.name, c.value)
+  for (const c of res?.cookies ?? []) parts.push(c.name, c.value)
+
+  if (req?.postData?.text) parts.push(req.postData.text)
+  if (req?.postData?.mimeType) parts.push(req.postData.mimeType)
+  // Skip base64-encoded binary bodies; include text bodies for deep search.
+  if (res?.content?.text && res.content.encoding !== 'base64') {
+    parts.push(res.content.text)
+  }
+
+  return parts.join(' \u0001 ').toLowerCase()
+}
+
 export function normalizeEntries(har: HarFile): NormalizedEntry[] {
   const entries = har.log.entries
   const starts = entries.map((e) => new Date(e.startedDateTime).getTime())
@@ -126,11 +152,13 @@ export function normalizeEntries(har: HarFile): NormalizedEntry[] {
       statusClass: statusClassOf(status),
       type: deriveType(entry),
       mimeType: entry.response?.content?.mimeType ?? '',
+      protocol: entry.response?.httpVersion || entry.request?.httpVersion || '',
       size: transferSize(entry),
       resourceSize: resourceSize > 0 ? resourceSize : 0,
       time: entry.time ?? 0,
       startOffset: Number.isFinite(started) ? started - firstStart : 0,
       startedDateTime: Number.isFinite(started) ? started : firstStart,
+      searchText: buildSearchText(entry),
       raw: entry,
     }
   })
