@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+import { ThemeToggle } from './ThemeToggle'
 import './FileUpload.css'
 
 interface Props {
@@ -32,6 +33,9 @@ export function FileUpload({ onFile, onLoadSample, error }: Props) {
 
   return (
     <div className="upload-screen">
+      <div className="upload-topbar">
+        <ThemeToggle />
+      </div>
       <div className="upload-hero">
         <div className="upload-logo" aria-hidden>
           <svg width="52" height="52" viewBox="0 0 32 32">

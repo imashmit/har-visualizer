@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   /* Neutral base */
   --bg: #f7f8fa;
   --surface: #ffffff;
@@ -54,6 +55,55 @@
     Helvetica, Arial, sans-serif;
   --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', ui-monospace,
     Menlo, Consolas, monospace;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  /* Neutral base */
+  --bg: #0e1118;
+  --surface: #161b26;
+  --surface-2: #1c2230;
+  --surface-hover: #232b3b;
+  --border: #2a3242;
+  --border-strong: #3a4456;
+
+  /* Text */
+  --text: #e6e9f0;
+  --text-muted: #9aa6bb;
+  --text-faint: #6b7689;
+
+  /* Accents (colorful elements) */
+  --accent: #818cf8;
+  --accent-soft: #242a44;
+  --accent-strong: #a5b4fc;
+
+  /* Status colors */
+  --c-2xx: #34d399;
+  --c-3xx: #818cf8;
+  --c-4xx: #fbbf24;
+  --c-5xx: #f87171;
+  --c-pending: #94a3b8;
+
+  /* Method colors */
+  --m-get: #60a5fa;
+  --m-post: #4ade80;
+  --m-put: #fbbf24;
+  --m-delete: #f87171;
+  --m-patch: #c084fc;
+  --m-other: #94a3b8;
+
+  /* Waterfall timing segments */
+  --t-blocked: #475569;
+  --t-dns: #2dd4bf;
+  --t-connect: #fbbf24;
+  --t-ssl: #c084fc;
+  --t-send: #818cf8;
+  --t-wait: #34d399;
+  --t-receive: #60a5fa;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.55);
 }
 
 * {

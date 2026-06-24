@@ -1,4 +1,5 @@
 .upload-screen {
+  position: relative;
   min-height: 100%;
   display: grid;
   place-items: center;
@@ -6,6 +7,12 @@
   background:
     radial-gradient(900px 500px at 50% -10%, var(--accent-soft), transparent 70%),
     var(--bg);
+}
+
+.upload-topbar {
+  position: absolute;
+  top: 18px;
+  right: 18px;
 }
 
 .upload-hero {
@@ -61,6 +68,10 @@
   padding: 6px 12px;
   border-radius: 999px;
   margin: 0 0 26px;
+}
+:root[data-theme='dark'] .upload-privacy {
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.25);
 }
 
 .dropzone {

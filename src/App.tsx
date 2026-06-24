@@ -6,6 +6,7 @@ import { Timeline } from './components/Timeline'
 import { RequestList } from './components/RequestList'
 import { DetailPanel } from './components/DetailPanel'
 import { WaterfallLegend } from './components/WaterfallChart'
+import { ThemeToggle } from './components/ThemeToggle'
 import { DEFAULT_COLUMNS, type ColumnKey } from './components/columns'
 import { HarParseError, normalizeEntries, parseHar, summarize } from './utils/harParser'
 import { typeLabel } from './utils/format'
@@ -128,6 +129,7 @@ export default function App() {
           {loaded.fileName}
         </span>
         <div className="header-spacer" />
+        <ThemeToggle />
         <button className="new-file-btn" onClick={reset}>
           Open another file
         </button>
