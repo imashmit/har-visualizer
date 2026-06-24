@@ -25,6 +25,35 @@
   user-select: none;
   white-space: nowrap;
 }
+.col-resizer {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 9px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 3;
+  touch-action: none;
+}
+.col-resizer::after {
+  content: '';
+  position: absolute;
+  top: 25%;
+  right: 4px;
+  width: 2px;
+  height: 50%;
+  border-radius: 2px;
+  background: transparent;
+  transition: background 0.12s;
+}
+.request-list thead th:hover .col-resizer::after,
+.col-resizer:hover::after {
+  background: var(--border-strong);
+}
+.col-resizer:hover::after {
+  background: var(--accent);
+}
+
 .request-list th.sortable {
   cursor: pointer;
 }

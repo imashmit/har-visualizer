@@ -1,9 +1,35 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { NormalizedEntry } from '../types/har'
 import { COLUMN_MAP, type ColumnDef, type ColumnKey } from './columns'
 import './RequestList.css'
 
 type SortDir = 'asc' | 'desc'
+
+const WIDTHS_STORAGE_KEY = 'har-col-widths'
+const MIN_COL_WIDTH = 56
+
+const DEFAULT_WIDTHS: Record<ColumnKey, number> = {
+  name: 260,
+  method: 80,
+  status: 86,
+  type: 100,
+  domain: 160,
+  protocol: 90,
+  size: 90,
+  time: 90,
+  start: 96,
+  waterfall: 240,
+}
+
+function loadWidths(): Record<ColumnKey, number> {
+  if (typeof window === 'undefined') return { ...DEFAULT_WIDTHS }
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(WIDTHS_STORAGE_KEY) ?? '{}')
+    return { ...DEFAULT_WIDTHS, ...stored }
+  } catch {
+    return { ...DEFAULT_WIDTHS }
+  }
+}
 
 interface Props {
   entries: NormalizedEntry[]
@@ -16,17 +42,55 @@ interface Props {
 export function RequestList({ entries, selectedId, onSelect, totalSpan, columns }: Props) {
   const [sortKey, setSortKey] = useState<ColumnKey>('start')
   const [sortDir, setSortDir] = useState<SortDir>('asc')
+  const [widths, setWidths] = useState<Record<ColumnKey, number>>(loadWidths)
   const selectedRowRef = useRef<HTMLTableRowElement | null>(null)
+  const resizingRef = useRef<{ key: ColumnKey; startX: number; startW: number } | null>(null)
 
   // Bring the selected row into view (e.g. when picked from the timeline).
   useEffect(() => {
     selectedRowRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [selectedId])
 
+  // Persist column widths.
+  useEffect(() => {
+    window.localStorage.setItem(WIDTHS_STORAGE_KEY, JSON.stringify(widths))
+  }, [widths])
+
+  const onResizeMove = useCallback((ev: MouseEvent) => {
+    const r = resizingRef.current
+    if (!r) return
+    const next = Math.max(MIN_COL_WIDTH, r.startW + (ev.clientX - r.startX))
+    setWidths((w) => ({ ...w, [r.key]: next }))
+  }, [])
+
+  const onResizeEnd = useCallback(() => {
+    resizingRef.current = null
+    document.removeEventListener('mousemove', onResizeMove)
+    document.removeEventListener('mouseup', onResizeEnd)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  }, [onResizeMove])
+
+  const onResizeStart = useCallback(
+    (e: React.MouseEvent, key: ColumnKey) => {
+      e.preventDefault()
+      e.stopPropagation()
+      resizingRef.current = { key, startX: e.clientX, startW: widths[key] ?? DEFAULT_WIDTHS[key] }
+      document.addEventListener('mousemove', onResizeMove)
+      document.addEventListener('mouseup', onResizeEnd)
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+    },
+    [widths, onResizeMove, onResizeEnd],
+  )
+
+  useEffect(() => () => onResizeEnd(), [onResizeEnd])
+
   const cols: ColumnDef[] = useMemo(
     () => columns.map((k) => COLUMN_MAP[k]).filter(Boolean),
     [columns],
   )
+
 
   // Fall back to a visible column if the active sort column was hidden.
   const activeSortKey: ColumnKey = columns.includes(sortKey)
@@ -74,9 +138,14 @@ export function RequestList({ entries, selectedId, onSelect, totalSpan, columns 
   return (
     <div className="request-list">
       <table>
+        <colgroup>
+          {cols.map((c) => (
+            <col key={c.key} style={{ width: widths[c.key] ?? DEFAULT_WIDTHS[c.key] }} />
+          ))}
+        </colgroup>
         <thead>
           <tr>
-            {cols.map((c) => (
+            {cols.map((c, i) => (
               <th
                 key={c.key}
                 className={`${c.className}${c.sortable ? ' sortable' : ''}${
@@ -90,6 +159,16 @@ export function RequestList({ entries, selectedId, onSelect, totalSpan, columns 
                     <span className="sort-arrow">{sortDir === 'asc' ? '\u2191' : '\u2193'}</span>
                   )}
                 </span>
+                {i < cols.length - 1 && (
+                  <span
+                    className="col-resizer"
+                    onMouseDown={(e) => onResizeStart(e, c.key)}
+                    onClick={(e) => e.stopPropagation()}
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label={`Resize ${c.label} column`}
+                  />
+                )}
               </th>
             ))}
           </tr>
