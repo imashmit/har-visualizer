@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { NormalizedEntry } from '../types/har'
 import { formatDuration, methodColorVar, statusColorVar } from '../utils/format'
 import './Timeline.css'
@@ -19,8 +19,10 @@ interface Placed {
   widthPct: number
 }
 
-const LANE_HEIGHT = 16
-const MAX_LANES = 8
+const BAR_HEIGHT = 7
+const LANE_GAP = 4
+const LANE_PITCH = BAR_HEIGHT + LANE_GAP
+const MAX_LANES = 10
 
 function tickValues(span: number): number[] {
   const target = 5
@@ -35,9 +37,12 @@ function tickValues(span: number): number[] {
 
 export function Timeline({ entries, totalSpan, selectedId, onSelect }: Props) {
   const [hoveredId, setHoveredId] = useState<number | null>(null)
+  const [crosshair, setCrosshair] = useState<number | null>(null)
+  const plotRef = useRef<HTMLDivElement | null>(null)
+
+  const span = totalSpan > 0 ? totalSpan : 1
 
   const { placed, laneCount } = useMemo(() => {
-    const span = totalSpan > 0 ? totalSpan : 1
     const sorted = [...entries].sort((a, b) => a.startOffset - b.startOffset)
     const laneEnds: number[] = []
     const result: Placed[] = []
@@ -57,23 +62,53 @@ export function Timeline({ entries, totalSpan, selectedId, onSelect }: Props) {
         entry,
         lane,
         leftPct: (start / span) * 100,
-        widthPct: Math.max((Math.max(entry.time, 0) / span) * 100, 0.5),
+        widthPct: Math.max((Math.max(entry.time, 0) / span) * 100, 0.4),
       })
     }
     return { placed: result, laneCount: Math.max(laneEnds.length, 1) }
-  }, [entries, totalSpan])
+  }, [entries, span])
 
-  const ticks = useMemo(() => tickValues(totalSpan > 0 ? totalSpan : 1), [totalSpan])
-  const span = totalSpan > 0 ? totalSpan : 1
+  // Sampled "requests in flight" curve — reveals bursts of concurrency.
+  const concurrency = useMemo(() => {
+    const N = 180
+    const ranges = entries.map(
+      (e) => [e.startOffset, e.startOffset + Math.max(e.time, 0)] as const,
+    )
+    let maxC = 1
+    const ys: number[] = []
+    for (let i = 0; i <= N; i++) {
+      const t = (i / N) * span
+      let c = 0
+      for (const [s, e] of ranges) if (t >= s && t < e) c++
+      ys.push(c)
+      if (c > maxC) maxC = c
+    }
+    const path = ys
+      .map((c, i) => `${(i / N) * 100},${(1 - c / maxC).toFixed(4)}`)
+      .join(' L ')
+    return { d: `M 0,1 L ${path} L 100,1 Z`, maxC }
+  }, [entries, span])
+
+  const ticks = useMemo(() => tickValues(span), [span])
   const hovered = placed.find((p) => p.entry.id === hoveredId) ?? null
-  const plotHeight = laneCount * LANE_HEIGHT + (laneCount - 1) * 3
+  const plotHeight = laneCount * BAR_HEIGHT + (laneCount - 1) * LANE_GAP
+
+  const onPlotMove = (e: React.MouseEvent) => {
+    const rect = plotRef.current?.getBoundingClientRect()
+    if (!rect || rect.width === 0) return
+    const pct = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1)
+    setCrosshair(pct)
+  }
 
   return (
     <div className="timeline">
       <div className="timeline-head">
         <span className="timeline-title">
           Request timeline
-          <span className="timeline-sub">{entries.length} shown · in time sequence</span>
+          <span className="timeline-sub">
+            {entries.length} shown
+            {concurrency.maxC > 1 && ` · peak ${concurrency.maxC} in flight`}
+          </span>
         </span>
         <div className="timeline-axis-top">
           {ticks.map((t) => (
@@ -85,7 +120,28 @@ export function Timeline({ entries, totalSpan, selectedId, onSelect }: Props) {
       </div>
 
       <div className="timeline-plot-wrap">
-        <div className="timeline-plot" style={{ height: plotHeight }}>
+        <div
+          ref={plotRef}
+          className="timeline-plot"
+          style={{ height: plotHeight }}
+          onMouseMove={onPlotMove}
+          onMouseLeave={() => setCrosshair(null)}
+        >
+          <svg
+            className="tl-concurrency"
+            viewBox="0 0 100 1"
+            preserveAspectRatio="none"
+            aria-hidden
+          >
+            <defs>
+              <linearGradient id="tlConcFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.18" />
+                <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.02" />
+              </linearGradient>
+            </defs>
+            <path d={concurrency.d} fill="url(#tlConcFill)" />
+          </svg>
+
           {ticks.map((t) => (
             <span
               key={t}
@@ -95,17 +151,26 @@ export function Timeline({ entries, totalSpan, selectedId, onSelect }: Props) {
             />
           ))}
 
+          {crosshair !== null && (
+            <span className="tl-crosshair" style={{ left: `${crosshair * 100}%` }} aria-hidden>
+              <span className="tl-crosshair-label">{formatDuration(crosshair * span)}</span>
+            </span>
+          )}
+
           {placed.map((p) => {
             const selected = p.entry.id === selectedId
             const isHover = p.entry.id === hoveredId
+            const isError = p.entry.statusClass === '5xx' || p.entry.statusClass === '4xx'
             return (
               <button
                 key={p.entry.id}
-                className={`tl-bar${selected ? ' selected' : ''}${isHover ? ' hover' : ''}`}
+                className={`tl-bar${selected ? ' selected' : ''}${isHover ? ' hover' : ''}${
+                  isError ? ' error' : ''
+                }`}
                 style={{
                   left: `${p.leftPct}%`,
                   width: `${p.widthPct}%`,
-                  top: p.lane * (LANE_HEIGHT + 3),
+                  top: p.lane * LANE_PITCH,
                   background: statusColorVar(p.entry.statusClass),
                 }}
                 onMouseEnter={() => setHoveredId(p.entry.id)}
@@ -122,7 +187,7 @@ export function Timeline({ entries, totalSpan, selectedId, onSelect }: Props) {
             className="tl-tooltip"
             style={{
               left: `${Math.min(Math.max(hovered.leftPct, 0), 100)}%`,
-              top: hovered.lane * (LANE_HEIGHT + 3) + LANE_HEIGHT + 6,
+              top: hovered.lane * LANE_PITCH + BAR_HEIGHT + 8,
             }}
           >
             <div className="tl-tip-row">

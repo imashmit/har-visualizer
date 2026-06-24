@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { NormalizedEntry } from '../types/har'
 import { COLUMN_MAP, type ColumnDef, type ColumnKey } from './columns'
 import './RequestList.css'
@@ -16,6 +16,12 @@ interface Props {
 export function RequestList({ entries, selectedId, onSelect, totalSpan, columns }: Props) {
   const [sortKey, setSortKey] = useState<ColumnKey>('start')
   const [sortDir, setSortDir] = useState<SortDir>('asc')
+  const selectedRowRef = useRef<HTMLTableRowElement | null>(null)
+
+  // Bring the selected row into view (e.g. when picked from the timeline).
+  useEffect(() => {
+    selectedRowRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [selectedId])
 
   const cols: ColumnDef[] = useMemo(
     () => columns.map((k) => COLUMN_MAP[k]).filter(Boolean),
@@ -92,6 +98,7 @@ export function RequestList({ entries, selectedId, onSelect, totalSpan, columns 
           {sorted.map((e) => (
             <tr
               key={e.id}
+              ref={selectedId === e.id ? selectedRowRef : undefined}
               className={selectedId === e.id ? 'selected' : ''}
               onClick={() => onSelect(e.id)}
             >
