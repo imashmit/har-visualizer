@@ -16,30 +16,16 @@
 
 .upload-logo {
   display: inline-flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 16px;
+  padding: 14px;
   background: var(--surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   margin-bottom: 22px;
+  line-height: 0;
 }
-.upload-logo .bar {
+.upload-logo svg {
   display: block;
-  height: 6px;
-  border-radius: 3px;
-}
-.upload-logo .b1 {
-  width: 40px;
-  background: var(--accent);
-}
-.upload-logo .b2 {
-  width: 26px;
-  background: var(--c-2xx);
-}
-.upload-logo .b3 {
-  width: 33px;
-  background: var(--c-4xx);
+  border-radius: 9px;
 }
 
 .upload-hero h1 {

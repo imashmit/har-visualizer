@@ -109,9 +109,18 @@ export default function App() {
       <header className="app-header">
         <button className="brand" onClick={reset} title="Load a different file">
           <span className="brand-logo" aria-hidden>
-            <span className="bar b1" />
-            <span className="bar b2" />
-            <span className="bar b3" />
+            <svg width="30" height="30" viewBox="0 0 32 32">
+              <rect width="32" height="32" rx="7" fill="#0f1730" />
+              <path
+                d="M4 17 H11 L14 11 L18 22 L20.5 17 H23"
+                fill="none"
+                stroke="#6366f1"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="25" cy="17" r="2.6" fill="#34d399" />
+            </svg>
           </span>
           <span className="brand-name">HAR Visualizer</span>
         </button>

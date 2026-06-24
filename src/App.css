@@ -25,28 +25,11 @@
 }
 .brand-logo {
   display: inline-flex;
-  flex-direction: column;
-  gap: 2.5px;
-  padding: 7px;
-  background: var(--accent-soft);
-  border-radius: 9px;
+  line-height: 0;
 }
-.brand-logo .bar {
+.brand-logo svg {
   display: block;
-  height: 3px;
-  border-radius: 2px;
-}
-.brand-logo .b1 {
-  width: 18px;
-  background: var(--accent);
-}
-.brand-logo .b2 {
-  width: 12px;
-  background: var(--c-2xx);
-}
-.brand-logo .b3 {
-  width: 15px;
-  background: var(--c-4xx);
+  border-radius: 8px;
 }
 .brand-name {
   font-size: 1.05rem;
