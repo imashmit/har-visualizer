@@ -322,6 +322,8 @@
 }
 .jv-key {
   color: #9bb4ff;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .jv-key.jv-index {
   color: #6b7488;
@@ -329,6 +331,7 @@
 .jv-colon {
   color: #8b93a7;
   margin-right: 6px;
+  flex-shrink: 0;
 }
 .jv-bracket {
   color: #c0c7d6;
@@ -343,6 +346,9 @@
 }
 .jv-val {
   color: #e2e8f0;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .jv-string {
   color: #7ee0a3;
