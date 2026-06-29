@@ -40,7 +40,7 @@ interface Props {
 }
 
 export function RequestList({ entries, selectedId, onSelect, totalSpan, columns }: Props) {
-  const [sortKey, setSortKey] = useState<ColumnKey>('start')
+  const [sortKey, setSortKey] = useState<ColumnKey>('waterfall')
   const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [widths, setWidths] = useState<Record<ColumnKey, number>>(loadWidths)
   const selectedRowRef = useRef<HTMLTableRowElement | null>(null)

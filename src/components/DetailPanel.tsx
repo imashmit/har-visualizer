@@ -419,13 +419,13 @@ function JsonViewer({ value }: { value: unknown }) {
     el?.scrollIntoView({ block: 'nearest' })
   }, [active, matches])
 
-  const isOpen = (id: string, depth: number) => {
+  const isOpen = (id: string, _depth: number) => {
     if (forcedOpen.has(id)) return true
     const u = userToggled.get(id)
     if (u !== undefined) return u
     if (allMode === 'expand') return true
     if (allMode === 'collapse') return false
-    return depth <= 1
+    return true
   }
 
   const toggle = (id: string, depth: number) => {
