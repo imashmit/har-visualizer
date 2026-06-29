@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FileUpload } from './components/FileUpload'
 import { SummaryBar } from './components/SummaryBar'
 import { Toolbar, EMPTY_FILTERS, type Filters } from './components/Toolbar'
@@ -26,6 +26,47 @@ export default function App() {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [columns, setColumns] = useState<ColumnKey[]>(DEFAULT_COLUMNS)
+
+  const DETAIL_MIN = 380
+  const [detailWidth, setDetailWidth] = useState<number>(() => {
+    const stored = Number(localStorage.getItem('har-detail-width'))
+    return stored >= DETAIL_MIN ? stored : 560
+  })
+  const resizingRef = useRef(false)
+
+  const onDetailResizeMove = useCallback((ev: MouseEvent) => {
+    if (!resizingRef.current) return
+    const max = window.innerWidth - 360
+    const next = Math.min(max, Math.max(DETAIL_MIN, window.innerWidth - ev.clientX))
+    setDetailWidth(next)
+  }, [])
+
+  const onDetailResizeEnd = useCallback(() => {
+    resizingRef.current = false
+    document.removeEventListener('mousemove', onDetailResizeMove)
+    document.removeEventListener('mouseup', onDetailResizeEnd)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  }, [onDetailResizeMove])
+
+  const onDetailResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      resizingRef.current = true
+      document.addEventListener('mousemove', onDetailResizeMove)
+      document.addEventListener('mouseup', onDetailResizeEnd)
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+    },
+    [onDetailResizeMove, onDetailResizeEnd],
+  )
+
+  useEffect(() => {
+    localStorage.setItem('har-detail-width', String(detailWidth))
+  }, [detailWidth])
+
+  useEffect(() => () => onDetailResizeEnd(), [onDetailResizeEnd])
+
 
   const loadFromText = (text: string, fileName: string) => {
     try {
@@ -156,7 +197,14 @@ export default function App() {
         onColumnsReset={() => setColumns(DEFAULT_COLUMNS)}
       />
 
-      <div className={`app-main${selectedEntry ? ' with-detail' : ''}`}>
+      <div
+        className={`app-main${selectedEntry ? ' with-detail' : ''}`}
+        style={
+          selectedEntry
+            ? { gridTemplateColumns: `minmax(0, 1fr) 6px ${detailWidth}px` }
+            : undefined
+        }
+      >
         <div className="list-pane">
           <RequestList
             entries={filtered}
@@ -168,9 +216,18 @@ export default function App() {
           <WaterfallLegend />
         </div>
         {selectedEntry && (
-          <div className="detail-pane">
-            <DetailPanel entry={selectedEntry} onClose={() => setSelectedId(null)} />
-          </div>
+          <>
+            <div
+              className="pane-resizer"
+              onMouseDown={onDetailResizeStart}
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize details panel"
+            />
+            <div className="detail-pane">
+              <DetailPanel entry={selectedEntry} onClose={() => setSelectedId(null)} />
+            </div>
+          </>
         )}
       </div>
     </div>

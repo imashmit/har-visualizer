@@ -102,10 +102,29 @@
   overflow: hidden;
 }
 
+.pane-resizer {
+  cursor: col-resize;
+  background: var(--border);
+  position: relative;
+  transition: background 0.12s;
+}
+.pane-resizer:hover,
+.pane-resizer:active {
+  background: var(--accent);
+}
+.pane-resizer::after {
+  content: '';
+  position: absolute;
+  inset: 0 -4px;
+}
+
 @media (max-width: 880px) {
   .app-main.with-detail {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
     grid-template-rows: 1fr 1fr;
+  }
+  .pane-resizer {
+    display: none;
   }
   .app-main.with-detail .list-pane {
     border-right: none;
